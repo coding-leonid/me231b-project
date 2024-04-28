@@ -12,24 +12,33 @@ def estInitialize():
     # 
     # The third return variable must be a string with the estimator type
 
-    #we make the internal state a list, with the first three elements the position
-    # x, y; the angle theta; and our favorite color. 
-    x = 0
-    y = 0
-    theta = 0
-    color = 'green' 
-    # note that there is *absolutely no prescribed format* for this internal state.
-    # You can put in it whatever you like. Probably, you'll want to keep the position
-    # and angle, and probably you'll remove the color.
-    internalState = [x,
-                     y,
-                     theta, 
-                     color
-                     ]
+    """ KALMAN FILTER """
+    x = 0.
+    y = 0.
+    theta = np.pi / 4
+    cov = np.diag([25., 25., (np.pi / 6) ** 2])
+
+    internalState = [
+        x,
+        y,
+        theta, 
+        cov
+    ]
+
+    """ PARTICLE FILTER """
+    # num_particles = 10
+    # init_particles = np.random.multivariate_normal(
+    #     mean=np.zeros(3),
+    #     cov=np.diag([25., 25., (np.pi / 6) ** 2]),
+    #     size=num_particles
+    # )
+    # internalState = [
+    #     init_particles,
+    #     num_particles
+    # ]
 
     # replace these names with yours. Delete the second name if you are working alone.
-    studentNames = ['Bart Simpson',
-                    'Lisa Simpson']
+    studentNames = ['Leonid Pototskiy']
     
     # replace this with the estimator type. Use one of the following options:
     #  'EKF' for Extended Kalman Filter

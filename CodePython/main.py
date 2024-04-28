@@ -4,59 +4,68 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from estRun import estRun
+from estRun import UKF, EKF, PF
 from estInitialize import estInitialize
+from time import perf_counter
 
 #provide the index of the experimental run you would like to use.
 # Note that using "0" means that you will load the measurement calibration data.
-experimentalRun = 1
+#experimentalRun = np.random.randint(0,100)
+times, x_errs, y_errs, theta_errs = [], [], [], []
 
-print('Loading the data file #', experimentalRun)
-experimentalData = np.genfromtxt ('data/run_{0:03d}.csv'.format(experimentalRun), delimiter=',')
+for experimentalRun in range(1,2):
+    print('Loading the data file #', experimentalRun)
+    experimentalData = np.genfromtxt ('/home/leonid/Projects/me231b-project/data/run_{0:03d}.csv'.format(experimentalRun), delimiter=',')
 
-#===============================================================================
-# Here, we run your estimator's initialization
-#===============================================================================
-print('Running the initialization')
-internalState, studentNames, estimatorType = estInitialize()
+    #===============================================================================
+    # Here, we run your estimator's initialization
+    #===============================================================================
+    #print('Running the initialization')
+    internalState, studentNames, estimatorType = estInitialize()
 
-numDataPoints = experimentalData.shape[0]
+    numDataPoints = experimentalData.shape[0]
 
-#Here we will store the estimated position and orientation, for later plotting:
-estimatedPosition_x = np.zeros([numDataPoints,])
-estimatedPosition_y = np.zeros([numDataPoints,])
-estimatedAngle = np.zeros([numDataPoints,])
+    #Here we will store the estimated position and orientation, for later plotting:
+    estimatedPosition_x = np.zeros([numDataPoints,])
+    estimatedPosition_y = np.zeros([numDataPoints,])
+    estimatedAngle = np.zeros([numDataPoints,])
 
-print('Running the system')
-dt = experimentalData[1,0] - experimentalData[0,0]
-for k in range(numDataPoints):
-    t = experimentalData[k,0]
-    gamma = experimentalData[k,1]
-    omega = experimentalData[k,2]
-    measx = experimentalData[k,3]
-    measy = experimentalData[k,4]
-    
-    #run the estimator:
-    x, y, theta, internalState = estRun(t, dt, internalState, gamma, omega, (measx, measy))
+    #print('Running the system')
+    dt = experimentalData[1,0] - experimentalData[0,0]
+    start = perf_counter()
+    for k in range(numDataPoints):
+        t = experimentalData[k,0]
+        gamma = experimentalData[k,1]
+        omega = experimentalData[k,2]
+        measx = experimentalData[k,3]
+        measy = experimentalData[k,4]
+        
+        #run the estimator:
+        x, y, theta, internalState = UKF(t, dt, internalState, gamma, omega, (measx, measy))
 
-    #keep track:
-    estimatedPosition_x[k] = x
-    estimatedPosition_y[k] = y
-    estimatedAngle[k] = theta
-    
+        #keep track:
+        estimatedPosition_x[k] = x
+        estimatedPosition_y[k] = y
+        estimatedAngle[k] = theta  
+    end = perf_counter()
+    times.append(end - start)
+    #print('Done running'),
+    #make sure the angle is in [-pi,pi]
+    estimatedAngle = np.mod(estimatedAngle+np.pi,2*np.pi)-np.pi
 
-print('Done running')
-#make sure the angle is in [-pi,pi]
-estimatedAngle = np.mod(estimatedAngle+np.pi,2*np.pi)-np.pi
+    posErr_x = estimatedPosition_x - experimentalData[:,5]
+    posErr_y = estimatedPosition_y - experimentalData[:,6]
+    angErr   = np.mod(estimatedAngle - experimentalData[:,7]+np.pi,2*np.pi)-np.pi
 
-posErr_x = estimatedPosition_x - experimentalData[:,5]
-posErr_y = estimatedPosition_y - experimentalData[:,6]
-angErr   = np.mod(estimatedAngle - experimentalData[:,7]+np.pi,2*np.pi)-np.pi
+    x_errs.append(abs(posErr_x[-1]))
+    y_errs.append(abs(posErr_y[-1]))
+    theta_errs.append(abs(angErr[-1]))
 
-print('Final error: ')
-print('   pos x =',posErr_x[-1],'m')
-print('   pos y =',posErr_y[-1],'m')
-print('   angle =',angErr[-1],'rad')
+print('Final mean error: ')
+print(f'   pos x = {np.mean(x_errs)} m')
+print(f'   pos y = {np.mean(y_errs)} m')
+print(f'   angle = {np.mean(theta_errs)} m')
+print(f'Mean run time: {np.mean(times)} s')
 
 ax = np.sum(np.abs(posErr_x))/numDataPoints
 ay = np.sum(np.abs(posErr_y))/numDataPoints
@@ -110,6 +119,20 @@ axHist[1].set_ylabel('Position y [m]')
 axHist[2].set_ylabel('Angle theta [rad]')
 axHist[3].set_ylabel('Steering angle gamma [rad]')
 axHist[4].set_ylabel('Pedal speed omega [rad/s]')
+
+"""
+plt.rcParams['font.size'] = 24
+figErr, axErr = plt.subplots()
+axErr.hist(x_errs, histtype='step', bins=30, color='r', label='x')
+axErr.hist(y_errs, histtype='step', bins=30, color='g', label='y')
+axErr.hist(theta_errs, histtype='step', bins=30, color='b', label=r"$\theta$")
+
+axErr.legend()
+
+axErr.set_xlabel('Absolute error')
+axErr.set_ylabel('Count')
+axErr.set_title('Final error distribution (EKF)')
+"""
 
 print('Done')
 plt.show()

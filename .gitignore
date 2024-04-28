@@ -1,2 +1,3 @@
 *.zip
 CodeMatlab/
+__pycache__/
